@@ -1,7 +1,7 @@
 
 import { LeaderboardEntry } from '../types';
 
-const SCRIPT_URL = process.env.VITE_GOOGLE_SHEET_URL || "";
+const SCRIPT_URL = process.env.VITE_GOOGLE_SHEET_URL || "https://script.google.com/macros/s/AKfycbxfvfGX7RKhHdXF3nxChTUtKMfffiC1dI5KSgjmRj_qW1hZiqbBRGj8Ol1STdGwvvlM/exec";
 
 export const fetchLeaderboard = async (): Promise<LeaderboardEntry[]> => {
   if (!SCRIPT_URL) return [];

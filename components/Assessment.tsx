@@ -21,7 +21,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Badge } from '../types';
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2DUlZCmLhDaAw2ojREEyvTYpuMAxAp-Haz-PKi6Bt6-9ey1jardi_yYFhvKrE0UQG/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfvfGX7RKhHdXF3nxChTUtKMfffiC1dI5KSgjmRj_qW1hZiqbBRGj8Ol1STdGwvvlM/exec";
 
 const BADGES: Badge[] = [
   { id: 'champion', name: 'Safety Champion', description: 'ปฏิบัติครบถ้วน 100%', icon: 'Trophy', color: 'text-yellow-500' },
@@ -202,15 +202,15 @@ const Assessment: React.FC = () => {
     const rawScore = calculateRawScore();
     const complianceRate = calculateCompliancePercentage();
     
-    // ดึงเฉพาะหัวข้อข้อที่พยาบาลทำผิด/ทำไม่ครบ มาใส่ในช่อง "จุดที่ต้องพัฒนา"
+    // ดึงหัวข้อที่ต้องพัฒนา
     const improvementPoints = answers
       .map((ans, idx) => (ans !== 0 ? COMPLIANCE_QUESTIONS[idx].question.split('.')[0] : null))
       .filter(Boolean)
       .join(", ");
 
     try {
-      // 1. เรียก AI มาวิเคราะห์ (ใช้ฟังก์ชันที่คุณมีอยู่แล้ว)
-      const aiResponse = await analyzeAssessmentResult({
+      // ⚡️ เทคนิค: สั่งให้ AI และ Google Sheets ทำงานพร้อมกัน ไม่ต้องรอกัน
+      const aiPromise = analyzeAssessmentResult({
         userName,
         testerName,
         unit,
@@ -220,30 +220,37 @@ const Assessment: React.FC = () => {
         wrongAnswers: getWrongAnswers()
       });
 
+      // รอเฉพาะ AI เพื่อเอามาแสดงผลหน้าจอ (เพราะผู้ใช้ต้องอ่าน)
+      const aiResponse = await aiPromise;
       const parsedAnalysis = JSON.parse(aiResponse);
       setAiAnalysis(parsedAnalysis);
 
-      // 2. ส่งข้อมูลไปที่ Google Sheets ตาม URL ที่ให้มา
-      await fetch(SCRIPT_URL, {
+      // ⚡️ ส่งข้อมูลลง Sheet แบบ "เบื้องหลัง" (Background) ไม่ต้องรอให้มันเสร็จก่อนโชว์หน้าจอ
+      fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors', 
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
-          traineeName: userName,           // ไปลงช่อง B
-          department: unit,               // ไปลงช่อง C
-          position: position,             // ไปลงช่อง D
-          evaluatorName: testerName,       // ไปลงช่อง E
-          experienceYears: userExperience, // ไปลงช่อง F
-          totalScore: `${rawScore}/12`,    // ไปลงช่อง G
-          improvementPoints: improvementPoints || "ไม่มี", // ไปลงช่อง H
-          aiSuggestions: parsedAnalysis.ai_advice         // ไปลงช่อง I
+          traineeName: userName,
+          department: unit,
+          position: position,
+          evaluatorName: testerName,
+          experienceYears: userExperience,
+          totalScore: `${rawScore}/12`,
+          improvementPoints: parsedAnalysis.improvement || improvementPoints,
+          aiSuggestions: parsedAnalysis.ai_advice
         }),
-      });
+      }).then(() => setSubmitStatus('success')) // อัปเดตสถานะเมื่อเสร็จ (ไม่ขวางหน้าจอ)
+        .catch(() => setSubmitStatus('error'));
 
-      setSubmitStatus('success');
     } catch (error) {
       console.error("Submission error:", error);
       setSubmitStatus('error');
+      // กรณี AI พัง ให้ดึงข้อมูลพื้นฐานมาโชว์ก่อน
+      setAiAnalysis({
+        improvement: improvementPoints || "ไม่มี",
+        ai_advice: "ขออภัย ระบบ AI ไม่สามารถประมวลผลคำแนะนำได้ในขณะนี้"
+      });
     } finally {
       setIsSubmitting(false);
     }
