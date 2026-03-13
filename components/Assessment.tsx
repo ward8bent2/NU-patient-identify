@@ -21,7 +21,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Badge } from '../types';
 
-const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SHEET_URL;
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2DUlZCmLhDaAw2ojREEyvTYpuMAxAp-Haz-PKi6Bt6-9ey1jardi_yYFhvKrE0UQG/exec";
 
 const BADGES: Badge[] = [
   { id: 'champion', name: 'Safety Champion', description: 'ปฏิบัติครบถ้วน 100%', icon: 'Trophy', color: 'text-yellow-500' },
